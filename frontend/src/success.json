@@ -1,0 +1,18 @@
+{
+    "quotes":[
+        {
+            "check": {
+                "isSuccess": true
+            },
+            "contract": {
+                "clientWay": "Sell",
+                "currency": "",
+                "isinCode": "JE00B4T3BW64",
+                "schemaIdentifier": "",
+                "schemaType": "",
+                "schemaVersion": "",
+                "solveHeader": ""
+            }
+        }
+    ]
+}

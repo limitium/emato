@@ -1,0 +1,21 @@
+{
+    "quotes":[
+        {
+            "check": {
+                "isSuccess": false,
+                "errors": [{
+                    "code": 10100,
+                    "fields": [
+                        {
+                            "initialName": "output_json_clientWay",
+                            "modelName": "output_json_clientWay"
+                        }
+                    ]
+                }],
+                "message": "Failed to predict the output fields",
+                "messageToDisplay": "Failed to predict the output fields",
+                "type": "Solving error"
+            }
+        }
+    ]
+}

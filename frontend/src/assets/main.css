@@ -1,0 +1,107 @@
+:root {
+  --primary-color: #e9ecef;
+  --secondary-color: #3498db;
+  --success-color: #2ecc71;
+  --danger-color: #e74c3c;
+  --background-color: #1a1d20;
+  --card-background: #212529;
+  --border-color: #2d3238;
+  --text-muted: #6c757d;
+  --input-background: #2d3238;
+  --input-color: #e9ecef;
+  --table-hover-bg: #2d3238;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--primary-color);
+}
+
+/* Dark theme overrides for Bootstrap components */
+.table {
+  color: var(--primary-color);
+  border-color: var(--border-color);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary-color);
+}
+
+.table-hover tbody tr:hover {
+  background-color: var(--table-hover-bg);
+  color: var(--primary-color);
+}
+
+.form-control {
+  background-color: var(--input-background);
+  border-color: var(--border-color);
+  color: var(--input-color);
+}
+
+.form-control:focus {
+  background-color: var(--input-background);
+  border-color: var(--secondary-color);
+  color: var(--input-color);
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.card {
+  background-color: var(--card-background);
+  border-color: var(--border-color);
+}
+
+.alert-danger {
+  background-color: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.pagination .page-link {
+  background-color: var(--card-background);
+  border-color: var(--border-color);
+  color: var(--primary-color);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+  background-color: var(--card-background);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.btn-primary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+  border-color: #2980b9;
+  transform: translateY(-1px);
+}
+  </rewritten_file>
