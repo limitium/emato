@@ -19,11 +19,11 @@
         </div>
         <template v-else>
           <i class="fas fa-cloud-upload-alt upload-icon"></i>
-          <p class="upload-text">Drag and Drop email (.eml) here</p>
+          <p class="upload-text">Drag and Drop email (.eml or .msg) here</p>
           <p class="upload-subtext">or</p>
           <label class="btn btn-outline-primary">
             Choose File
-            <input type="file" accept=".eml" @change="onFileChange($event)" class="hidden-input" />
+            <input type="file" accept=".eml,.msg" @change="onFileChange($event)" class="hidden-input" />
           </label>
         </template>
       </div>
@@ -48,8 +48,7 @@ export default {
       if (!file) return
       this.isLoading = true
       try {
-        const text = await file.text()
-        await this.uploadEmail(text)
+        await this.processFile(file)
       } catch (error) {
         this.error = "Failed to read file: " + error.message
       } finally {
@@ -62,8 +61,7 @@ export default {
         const file = e.dataTransfer.files[0]
         this.isLoading = true
         try {
-          const text = await file.text()
-          await this.uploadEmail(text)
+          await this.processFile(file)
         } catch (error) {
           this.error = "Failed to read file: " + error.message
         } finally {
@@ -71,10 +69,40 @@ export default {
         }
       }
     },
-    async uploadEmail(body) {
+    async processFile(file) {
+      // Check file extension
+      const fileExtension = file.name.split('.').pop().toLowerCase()
+      if (fileExtension !== 'eml' && fileExtension !== 'msg') {
+        throw new Error('Please upload a valid email file (.eml or .msg)')
+      }
+      
+      // Process based on file type
+      if (fileExtension === 'msg') {
+        // Read binary files as base64
+        const base64Content = await this.readFileAsBase64(file)
+        await this.uploadEmail(base64Content, 'msg')
+      } else {
+        // Read text files normally
+        const text = await file.text()
+        await this.uploadEmail(text, 'eml')
+      }
+    },
+    readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          // Extract the base64 part (remove data:application/octet-stream;base64,)
+          const base64Content = e.target.result.split(',')[1]
+          resolve(base64Content)
+        }
+        reader.onerror = (e) => reject(e)
+        reader.readAsDataURL(file)
+      })
+    },
+    async uploadEmail(body, fileType) {
       this.error = null
       try {
-        const resp = await axios.post('/api/parse', { body })
+        const resp = await axios.post('/api/parse', { body, fileType })
         this.$router.push('/parsed/email/' + resp.data.id)
       } catch (e) {
         // Check for X-Error-Message header

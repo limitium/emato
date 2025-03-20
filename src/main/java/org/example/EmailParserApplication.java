@@ -1,26 +1,37 @@
 package org.example;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import jakarta.mail.BodyPart;
 import jakarta.mail.Message;
 import jakarta.mail.Multipart;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Base64;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import org.apache.poi.hsmf.MAPIMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.filter.CommonsRequestLoggingFilter;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -28,6 +39,12 @@ import reactor.core.publisher.Mono;
 @RestController
 @CrossOrigin(origins = "http://localhost:3000") // Vite's default port
 public class EmailParserApplication {
+
+  private static final Logger logger = LoggerFactory.getLogger(EmailParserApplication.class);
+  private static final ObjectMapper objectMapper =
+      new ObjectMapper()
+          .enable(SerializationFeature.INDENT_OUTPUT)
+          .disable(JsonGenerator.Feature.ESCAPE_NON_ASCII);
 
   @Value("${ai.lab.maildrop.url}")
   private String mailDropUrl;
@@ -75,10 +92,20 @@ public class EmailParserApplication {
   @PostMapping("/api/parse")
   public ResponseEntity<Email> parseEmail(@RequestBody EmailRequest request) {
     try {
-      // Create mail session and parse email
+      // Create mail session
       Session session = Session.getDefaultInstance(new Properties());
-      MimeMessage mimeMessage =
-          new MimeMessage(session, new ByteArrayInputStream(request.body().getBytes()));
+      MimeMessage mimeMessage;
+
+      // Parse based on file type
+      String fileType = request.fileType() != null ? request.fileType().toLowerCase() : "eml";
+
+      if ("msg".equals(fileType)) {
+        // Parse MSG file
+        mimeMessage = parseMsgFile(request.body(), session);
+      } else {
+        // Default EML parsing
+        mimeMessage = new MimeMessage(session, new ByteArrayInputStream(request.body().getBytes()));
+      }
 
       // Extract email metadata
       String fromEmail = "Unknown";
@@ -110,9 +137,6 @@ public class EmailParserApplication {
       // Get content
       String body = extractEmailBody(mimeMessage);
 
-      // Create WebClient for making HTTP requests
-      WebClient webClient = WebClient.create();
-
       // Create and send AI request
       MailDropRequest mailDropRequest =
           new MailDropRequest(
@@ -123,7 +147,21 @@ public class EmailParserApplication {
               ccAddresses,
               subject,
               body,
-              LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+              LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")));
+
+      // Log the request before sending
+      logger.info("\nAI Lab request:\n" + objectMapper.writeValueAsString(mailDropRequest));
+
+      // Use WebClient to send request
+      WebClient webClient =
+          WebClient.builder()
+              .codecs(
+                  configurer ->
+                      configurer
+                          .defaultCodecs()
+                          .jackson2JsonEncoder(
+                              new Jackson2JsonEncoder(objectMapper, MediaType.APPLICATION_JSON)))
+              .build();
 
       // Send request to AI Lab endpoint with error handling
       MailDropResponse aiResponse;
@@ -141,16 +179,23 @@ public class EmailParserApplication {
                         response
                             .bodyToMono(String.class)
                             .flatMap(
-                                errorBody ->
-                                    Mono.error(
-                                        new RuntimeException(
-                                            "AI server error: "
-                                                + response.statusCode()
-                                                + " - "
-                                                + errorBody))))
+                                errorBody -> {
+                                  logger.error("AI Lab error response: " + errorBody);
+                                  return Mono.error(
+                                      new RuntimeException(
+                                          "AI server error: "
+                                              + response.statusCode()
+                                              + " - "
+                                              + errorBody));
+                                }))
                 .bodyToMono(MailDropResponse.class)
                 .block();
+
+        // Log the response
+        logger.info("\nAI Lab response:\n" + objectMapper.writeValueAsString(aiResponse));
+
       } catch (Exception e) {
+        logger.error("AI Lab request failed", e);
         throw new RuntimeException("AI server error: " + e.getMessage(), e);
       }
 
@@ -180,7 +225,7 @@ public class EmailParserApplication {
       return ResponseEntity.ok(email);
 
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error("Parse email failed", e);
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .header("X-Error-Message", e.getMessage())
           .body(null);
@@ -481,18 +526,23 @@ public class EmailParserApplication {
   }
 
   private Trade convertQuoteToTrade(Quote quote, Long emailId) {
+    // Check if the contract is present
+    Contract contract = quote.contract();
+
     return new Trade(
         nextTradeId++,
         emailId,
         quote.check().isSuccess(),
         !quote.check().isSuccess() ? quote.check().messageToDisplay() : null,
-        quote.contract().clientWay(),
-        quote.contract().currency(),
-        quote.contract().isinCode(),
-        quote.contract().schemaIdentifier(),
-        quote.contract().schemaType(),
-        quote.contract().schemaVersion(),
-        quote.contract().solveHeader(),
+        contract != null ? contract.clientWay() : null, // Use null if contract is not present
+        contract != null ? contract.currency() : null, // Use null if contract is not present
+        contract != null ? contract.isinCode() : null, // Use null if contract is not present
+        contract != null
+            ? contract.schemaIdentifier()
+            : null, // Use null if contract is not present
+        contract != null ? contract.schemaType() : null, // Use null if contract is not present
+        contract != null ? contract.schemaVersion() : null, // Use null if contract is not present
+        contract != null ? contract.solveHeader() : null, // Use null if contract is not present
         "CLIENT_" + emailId,
         "BROKER_" + emailId,
         1000.0, // default quantity
@@ -500,6 +550,98 @@ public class EmailParserApplication {
         LocalDate.now().format(DateTimeFormatter.ISO_DATE),
         LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_DATE),
         LocalDateTime.now());
+  }
+
+  @Bean
+  public CommonsRequestLoggingFilter requestLoggingFilter() {
+    CommonsRequestLoggingFilter loggingFilter =
+        new CommonsRequestLoggingFilter() {
+          @Override
+          protected void beforeRequest(HttpServletRequest request, String message) {
+            logger.info(message);
+          }
+
+          @Override
+          protected void afterRequest(HttpServletRequest request, String message) {
+            try {
+              String body =
+                  request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+              if (!body.isEmpty()) {
+                Object jsonBody = objectMapper.readValue(body, Object.class);
+                String prettyJson = objectMapper.writeValueAsString(jsonBody);
+                logger.info("Request body:\n" + prettyJson);
+              }
+            } catch (Exception e) {
+              logger.warn("Could not log request body", e);
+            }
+          }
+        };
+    loggingFilter.setIncludeQueryString(true);
+    loggingFilter.setIncludePayload(true);
+    loggingFilter.setMaxPayloadLength(10000);
+    return loggingFilter;
+  }
+
+  // Add logging for outgoing requests to AI Lab
+  private WebClient createWebClientWithLogging() {
+    return WebClient.builder()
+        .filter(
+            (request, next) -> {
+              // Log the outgoing request
+              try {
+                Object requestBody = request.body();
+                if (requestBody instanceof MailDropRequest) {
+                  String prettyJson = objectMapper.writeValueAsString(requestBody);
+                  logger.info("\nAI Lab request:\n" + prettyJson);
+                }
+              } catch (Exception e) {
+                logger.warn("Could not log request", e);
+              }
+              return next.exchange(request);
+            })
+        .build();
+  }
+
+  // Add method to parse MSG files
+  private MimeMessage parseMsgFile(String base64Content, Session session) throws Exception {
+    // Decode base64 content
+    byte[] msgBytes = Base64.getDecoder().decode(base64Content);
+    ByteArrayInputStream bis = new ByteArrayInputStream(msgBytes);
+
+    // Parse MSG file using POI
+    MAPIMessage msg = new MAPIMessage(bis);
+
+    // Create a new MimeMessage
+    MimeMessage mimeMessage = new MimeMessage(session);
+
+    // Set From
+    if (msg.getDisplayFrom() != null) {
+      mimeMessage.setFrom(new InternetAddress(msg.getDisplayFrom()));
+    }
+
+    // Set Subject
+    if (msg.getSubject() != null) {
+      mimeMessage.setSubject(msg.getSubject());
+    }
+
+    // Set To recipients
+    if (msg.getRecipientEmailAddressList() != null) {
+      for (String recipient : msg.getRecipientEmailAddressList()) {
+        mimeMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient));
+      }
+    }
+
+    // Set body
+    String textBody = msg.getTextBody();
+    String htmlBody = msg.getHtmlBody();
+
+    if (htmlBody != null) {
+      mimeMessage.setContent(htmlBody, "text/html; charset=UTF-8");
+    } else if (textBody != null) {
+      mimeMessage.setText(textBody);
+    }
+
+    return mimeMessage;
   }
 }
 
@@ -541,6 +683,6 @@ record Trade(
     String settlementDate,
     LocalDateTime createdAt) {}
 
-record EmailRequest(String body) {}
+record EmailRequest(String body, String fileType) {}
 
 record EmailResponse(List<Email> items, int total) {}

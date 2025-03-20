@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg custom-navbar">
       <div class="container">
         <router-link class="navbar-brand" to="/">
@@ -32,13 +32,39 @@
         </div>
       </div>
     </nav>
-    <router-view v-slot="{ Component }">
-      <transition name="fade" mode="out-in">
-        <component :is="Component" />
-      </transition>
-    </router-view>
+    
+    <main class="flex-grow-1">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
+    
+    <footer class="footer py-3 mt-auto">
+      <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="text-muted">© 2024 Email Parser</span>
+          <span class="text-muted">
+            <i class="fas fa-code-branch me-1"></i> Version {{ version }}
+            <span class="ms-2 badge bg-secondary">{{ buildDate }}</span>
+          </span>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
+
+<script>
+export default {
+  data() {
+    return {
+      version: import.meta.env.VITE_APP_VERSION || '1.0.0',
+      buildDate: import.meta.env.VITE_APP_BUILD_DATE || new Date().toISOString().split('T')[0]
+    }
+  }
+}
+</script>
 
 <style>
 .custom-navbar {
@@ -95,5 +121,15 @@
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.footer {
+  background-color: var(--card-background);
+  border-top: 1px solid var(--border-color);
+  font-size: 0.875rem;
+}
+
+.min-vh-100 {
+  min-height: 100vh;
 }
 </style>

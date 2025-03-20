@@ -73,47 +73,25 @@
                   {{ trade.errorMessage }}
                 </div>
                 <div class="row">
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <div class="mb-3">
-                      <label class="form-label">Client Way</label>
+                      <label class="form-label">Side</label>
                       <select class="form-select" v-model="trade.clientWay">
                         <option value="Buy">Buy</option>
                         <option value="Sell">Sell</option>
                       </select>
                     </div>
+                  </div>
+                  <div class="col-md-4">
                     <div class="mb-3">
                       <label class="form-label">Currency</label>
-                      <select class="form-select" v-model="trade.currency">
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                      </select>
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">ISIN Code</label>
-                      <input type="text" class="form-control" v-model="trade.isinCode">
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Quantity</label>
-                      <input type="number" class="form-control" v-model.number="trade.quantity">
+                      <input type="text" class="form-control" v-model="trade.currency" placeholder="USD, EUR, GBP...">
                     </div>
                   </div>
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <div class="mb-3">
-                      <label class="form-label">Price</label>
-                      <input type="number" step="0.01" class="form-control" v-model.number="trade.price">
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Trade Date</label>
-                      <input type="date" class="form-control" v-model="trade.tradeDate">
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Settlement Date</label>
-                      <input type="date" class="form-control" v-model="trade.settlementDate">
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Broker Alias</label>
-                      <input type="text" class="form-control" v-model="trade.brokerAlias">
+                      <label class="form-label">ISIN Code</label>
+                      <input type="text" class="form-control" v-model="trade.isinCode" placeholder="e.g. US0378331005">
                     </div>
                   </div>
                 </div>
@@ -173,17 +151,26 @@ export default {
       
       this.isSaving = true
       try {
-        // Prepare the update payload
+        // Prepare the update payload with only the necessary fields
         const updatePayload = {
           id: this.id,
           subject: this.emailDetails.subject,
           fromEmail: this.emailDetails.from,
           body: this.emailDetails.body,
           trades: this.trades.map(trade => ({
-            ...trade,
-            // Ensure numeric fields are properly typed
-            quantity: Number(trade.quantity),
-            price: Number(trade.price)
+            id: trade.id,
+            emailId: trade.emailId,
+            isSuccess: trade.isSuccess,
+            errorMessage: trade.errorMessage,
+            clientWay: trade.clientWay,
+            currency: trade.currency,
+            isinCode: trade.isinCode,
+            // Include default values for required fields
+            quantity: trade.quantity || 1000.0,
+            price: trade.price || 100.0,
+            tradeDate: trade.tradeDate || new Date().toISOString().split('T')[0],
+            settlementDate: trade.settlementDate || new Date().toISOString().split('T')[0],
+            createdAt: trade.createdAt || new Date().toISOString()
           })),
           sent: false,
           createdAt: new Date().toISOString(),
@@ -227,7 +214,36 @@ export default {
 
 .form-label {
   font-weight: 500;
-  color: var(--text-muted);
+  color: #000000;
+  margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+  height: 45px;
+  font-size: 1rem;
+  color: #000000;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-control::placeholder {
+  color: #adb5bd;
+  font-style: italic;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.alert-danger {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.2);
 }
 
 .btn-secondary {
