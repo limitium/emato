@@ -126,6 +126,7 @@ public class EmailParserApplication {
                   .map(address -> ((InternetAddress) address).getAddress())
                   .toArray(String[]::new)
               : new String[0];
+      toAddresses = new String[]{"ALLOCATIONS.EMEA.NLP.UAT <allocations.emea.nlp.uat@bnpparibas.com>"};
 
       String[] ccAddresses =
           mimeMessage.getRecipients(Message.RecipientType.CC) != null
@@ -326,6 +327,8 @@ public class EmailParserApplication {
                           "BUY", // clientWay
                           "USD", // currency
                           "US0378331005", // isinCode
+                          "AAPL", // securityCode
+                          10000.0, // notional
                           "TRADE_001", // schemaIdentifier
                           "EQUITY", // schemaType
                           "1.0", // schemaVersion
@@ -334,10 +337,10 @@ public class EmailParserApplication {
                           "BROKER_001", // brokerAlias
                           1000.0, // quantity
                           150.0, // price
-                          LocalDate.now().format(DateTimeFormatter.ISO_DATE), // tradeDate
+                          LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "T00:00", // tradeDate
                           LocalDate.now()
                               .plusDays(2)
-                              .format(DateTimeFormatter.ISO_DATE), // settlementDate
+                              .format(DateTimeFormatter.ISO_DATE) + "T00:00", // settlementDate
                           now // createdAt
                           ));
 
@@ -384,6 +387,13 @@ public class EmailParserApplication {
         "US88160R1014", // TSLA
         "US0231351067" // AMZN
       };
+      String[] securityCodes = {
+        "AAPL", // Apple
+        "MSFT", // Microsoft
+        "GOOGL", // Google
+        "TSLA", // Tesla
+        "AMZN" // Amazon
+      };
       String[] currencies = {"USD", "EUR", "GBP", "JPY", "CHF"};
       String[] clientWays = {"BUY", "SELL"};
 
@@ -397,29 +407,32 @@ public class EmailParserApplication {
 
         for (int j = 0; j < numTrades; j++) {
           boolean isSuccess = random.nextDouble() > 0.2; // 80% success rate
-          trades.add(
-              new Trade(
-                  nextTradeId++,
-                  (long) i + 1,
-                  isSuccess,
-                  isSuccess
-                      ? null
-                      : "Failed to process trade: Invalid "
-                          + (random.nextBoolean() ? "price" : "quantity"),
-                  clientWays[random.nextInt(clientWays.length)],
-                  currencies[random.nextInt(currencies.length)],
-                  isinCodes[random.nextInt(isinCodes.length)],
-                  "SCHEMA_" + (i + 1),
-                  "EQUITY",
-                  "1.0",
-                  "HEADER_" + (i + 1),
-                  "CLIENT_" + (random.nextInt(5) + 1),
-                  "BROKER_" + (random.nextInt(5) + 1),
-                  100.0 * (random.nextInt(10) + 1), // quantity between 100-1000
-                  50.0 + random.nextDouble() * 950.0, // price between 50-1000
-                  emailDate.format(DateTimeFormatter.ISO_DATE),
-                  emailDate.plusDays(2).format(DateTimeFormatter.ISO_DATE),
-                  emailDate));
+          
+          // Create trade with all required parameters in the correct order
+          Trade trade = new Trade(
+              nextTradeId++,                                  // id
+              (long) i + 1,                                   // emailId
+              isSuccess,                                      // isSuccess
+              isSuccess ? null : "Failed to process trade",   // errorMessage
+              clientWays[random.nextInt(clientWays.length)],  // clientWay
+              currencies[random.nextInt(currencies.length)],  // currency
+              isinCodes[random.nextInt(isinCodes.length)],    // isinCode
+              securityCodes[random.nextInt(securityCodes.length)], // securityCode
+              random.nextDouble() * 100000.0,                 // notional
+              "SCHEMA_" + (i + 1),                            // schemaIdentifier
+              "EQUITY",                                       // schemaType
+              "1.0",                                          // schemaVersion
+              "HEADER_" + (i + 1),                            // solveHeader
+              "CLIENT_" + (random.nextInt(5) + 1),            // clientId
+              "BROKER_" + (random.nextInt(5) + 1),            // brokerId
+              100.0 * (random.nextInt(10) + 1),               // quantity
+              50.0 + random.nextDouble() * 950.0,             // price
+              emailDate.format(DateTimeFormatter.ISO_DATE) + "T00:00", // tradeDate
+              emailDate.plusDays(2).format(DateTimeFormatter.ISO_DATE) + "T00:00", // settlementDate
+              emailDate                                       // createdAt
+          );
+          
+          trades.add(trade);
         }
 
         emails.add(
@@ -468,10 +481,16 @@ public class EmailParserApplication {
       String clientWay,
       String currency,
       String isinCode,
+      Double notional,
+      Double price,
+      String securityCode,
+      String settlementDate,
+      String tradeDate,
       String schemaIdentifier,
       String schemaType,
       String schemaVersion,
-      String solveHeader) {}
+      String solveHeader
+  ) {}
 
   // Add a counter for trade IDs
   private static Long nextTradeId = 1L;
@@ -508,16 +527,38 @@ public class EmailParserApplication {
                 "Solving error");
       }
 
-      Contract contract =
-          new Contract(
-              isSuccess ? (random.nextBoolean() ? "Buy" : "Sell") : "",
-              isSuccess ? (random.nextBoolean() ? "USD" : "EUR") : "",
-              isSuccess ? "JE00B4T3BW64" : "",
-              "", // schemaIdentifier
-              "", // schemaType
-              "", // schemaVersion
-              "" // solveHeader
-              );
+      Contract contract;
+      if (isSuccess) {
+        contract =
+            new Contract(
+                random.nextBoolean() ? "Buy" : "Sell",
+                random.nextBoolean() ? "USD" : "EUR",
+                "JE00B4T3BW64",
+                random.nextDouble() * 10000.0,
+                random.nextDouble() * 100.0 + 50.0,
+                "AAPL",
+                LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_DATE) + "T00:00",
+                LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "T00:00",
+                "SCHEMA_ID_" + i,
+                "EQUITY",
+                "1.0",
+                "SOLVE_HEADER_" + i);
+      } else {
+        contract =
+            new Contract(
+                "",
+                "",
+                "",
+                null,
+                null,
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "");
+      }
 
       quotes.add(new Quote(check, contract));
     }
@@ -528,28 +569,34 @@ public class EmailParserApplication {
   private Trade convertQuoteToTrade(Quote quote, Long emailId) {
     // Check if the contract is present
     Contract contract = quote.contract();
-
+    
+    // Default values for dates
+    String defaultTradeDate = LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "T00:00";
+    String defaultSettlementDate = LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_DATE) + "T00:00";
+    
     return new Trade(
         nextTradeId++,
         emailId,
         quote.check().isSuccess(),
         !quote.check().isSuccess() ? quote.check().messageToDisplay() : null,
-        contract != null ? contract.clientWay() : null, // Use null if contract is not present
-        contract != null ? contract.currency() : null, // Use null if contract is not present
-        contract != null ? contract.isinCode() : null, // Use null if contract is not present
-        contract != null
-            ? contract.schemaIdentifier()
-            : null, // Use null if contract is not present
-        contract != null ? contract.schemaType() : null, // Use null if contract is not present
-        contract != null ? contract.schemaVersion() : null, // Use null if contract is not present
-        contract != null ? contract.solveHeader() : null, // Use null if contract is not present
+        contract != null ? contract.clientWay() : null,
+        contract != null ? contract.currency() : null,
+        contract != null ? contract.isinCode() : null,
+        contract != null ? contract.securityCode() : null,
+        contract != null ? contract.notional() : null,
+        contract != null ? contract.schemaIdentifier() : null,
+        contract != null ? contract.schemaType() : null,
+        contract != null ? contract.schemaVersion() : null,
+        contract != null ? contract.solveHeader() : null,
         "CLIENT_" + emailId,
         "BROKER_" + emailId,
-        1000.0, // default quantity
-        100.0, // default price
-        LocalDate.now().format(DateTimeFormatter.ISO_DATE),
-        LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_DATE),
-        LocalDateTime.now());
+        0.0, // default quantity
+        contract != null ? contract.price() : 0.0,
+        // Use null for dates if they're null in the contract
+        contract != null ? (contract.tradeDate() != null ? contract.tradeDate() : null) : null,
+        contract != null ? (contract.settlementDate() != null ? contract.settlementDate() : null) : null,
+        LocalDateTime.now()
+    );
   }
 
   @Bean
@@ -664,24 +711,25 @@ record Email(
 record Trade(
     Long id,
     Long emailId,
-    Boolean isSuccess,
+    boolean isSuccess,
     String errorMessage,
-    // AI extracted fields
     String clientWay,
     String currency,
     String isinCode,
+    String securityCode,
+    Double notional,
     String schemaIdentifier,
     String schemaType,
     String schemaVersion,
     String solveHeader,
-    // Additional trade details
-    String clientAlias,
-    String brokerAlias,
+    String clientId,
+    String brokerId,
     Double quantity,
     Double price,
     String tradeDate,
     String settlementDate,
-    LocalDateTime createdAt) {}
+    LocalDateTime createdAt
+) {}
 
 record EmailRequest(String body, String fileType) {}
 

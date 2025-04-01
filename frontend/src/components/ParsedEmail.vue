@@ -72,7 +72,8 @@
                 <div v-if="!trade.isSuccess" class="alert alert-danger mb-3">
                   {{ trade.errorMessage }}
                 </div>
-                <div class="row">
+                
+                <div class="row mb-3">
                   <div class="col-md-4">
                     <div class="mb-3">
                       <label class="form-label">Side</label>
@@ -92,6 +93,46 @@
                     <div class="mb-3">
                       <label class="form-label">ISIN Code</label>
                       <input type="text" class="form-control" v-model="trade.isinCode" placeholder="e.g. US0378331005">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Security Code</label>
+                      <input type="text" class="form-control" v-model="trade.securityCode" placeholder="e.g. AAPL">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Notional</label>
+                      <input type="number" class="form-control" v-model="trade.notional" placeholder="e.g. 10000">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label class="form-label">Price</label>
+                      <input type="number" class="form-control" v-model="trade.price" placeholder="e.g. 150.50">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Trade Date</label>
+                      <input type="date" class="form-control" 
+                             :value="formatDateForInput(trade.tradeDate)"
+                             @input="updateTradeDate(trade, $event)">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label class="form-label">Settlement Date</label>
+                      <input type="date" class="form-control" 
+                             :value="formatDateForInput(trade.settlementDate)"
+                             @input="updateSettlementDate(trade, $event)">
                     </div>
                   </div>
                 </div>
@@ -128,6 +169,21 @@ export default {
     }
   },
   methods: {
+    formatDateForInput(dateString) {
+      // Convert from format like '2024-04-10T00:00' to '2024-04-10'
+      if (!dateString) return '';
+      return dateString.split('T')[0];
+    },
+    updateTradeDate(trade, event) {
+      // Update the trade date when the input changes
+      const newDate = event.target.value;
+      trade.tradeDate = newDate ? `${newDate}T00:00` : '';
+    },
+    updateSettlementDate(trade, event) {
+      // Update the settlement date when the input changes
+      const newDate = event.target.value;
+      trade.settlementDate = newDate ? `${newDate}T00:00` : '';
+    },
     async loadData() {
       try {
         const resp = await axios.get('/api/email/' + this.id)
@@ -165,11 +221,19 @@ export default {
             clientWay: trade.clientWay,
             currency: trade.currency,
             isinCode: trade.isinCode,
-            // Include default values for required fields
-            quantity: trade.quantity || 1000.0,
-            price: trade.price || 100.0,
-            tradeDate: trade.tradeDate || new Date().toISOString().split('T')[0],
-            settlementDate: trade.settlementDate || new Date().toISOString().split('T')[0],
+            securityCode: trade.securityCode,
+            notional: trade.notional || 0,
+            price: trade.price || 0,
+            tradeDate: trade.tradeDate || new Date().toISOString().split('T')[0] + 'T00:00',
+            settlementDate: trade.settlementDate || new Date().toISOString().split('T')[0] + 'T00:00',
+            // Include other required fields
+            quantity: trade.quantity || 0.0,
+            schemaIdentifier: trade.schemaIdentifier,
+            schemaType: trade.schemaType,
+            schemaVersion: trade.schemaVersion,
+            solveHeader: trade.solveHeader,
+            clientId: trade.clientId || "CLIENT_" + this.id,
+            brokerId: trade.brokerId || "BROKER_" + this.id,
             createdAt: trade.createdAt || new Date().toISOString()
           })),
           sent: false,
