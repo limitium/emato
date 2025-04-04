@@ -591,7 +591,7 @@ public class EmailParserApplication {
         "CLIENT_" + emailId,
         "BROKER_" + emailId,
         0.0, // default quantity
-        contract != null ? contract.price() : 0.0,
+        contract != null ? (contract.price() != null ? contract.price() : 0.0) : 0.0,
         // Use null for dates if they're null in the contract
         contract != null ? (contract.tradeDate() != null ? contract.tradeDate() : null) : null,
         contract != null ? (contract.settlementDate() != null ? contract.settlementDate() : null) : null,
