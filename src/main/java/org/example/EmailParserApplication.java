@@ -126,7 +126,8 @@ public class EmailParserApplication {
                   .map(address -> ((InternetAddress) address).getAddress())
                   .toArray(String[]::new)
               : new String[0];
-      toAddresses = new String[]{"ALLOCATIONS.EMEA.NLP.UAT <allocations.emea.nlp.uat@bnpparibas.com>"};
+      toAddresses =
+          new String[] {"ALLOCATIONS.EMEA.NLP.UAT <allocations.emea.nlp.uat@bnpparibas.com>"};
 
       String[] ccAddresses =
           mimeMessage.getRecipients(Message.RecipientType.CC) != null
@@ -337,10 +338,10 @@ public class EmailParserApplication {
                           "BROKER_001", // brokerAlias
                           1000.0, // quantity
                           150.0, // price
-                          LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "T00:00", // tradeDate
-                          LocalDate.now()
-                              .plusDays(2)
-                              .format(DateTimeFormatter.ISO_DATE) + "T00:00", // settlementDate
+                          LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+                              + "T00:00", // tradeDate
+                          LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_DATE)
+                              + "T00:00", // settlementDate
                           now // createdAt
                           ));
 
@@ -407,31 +408,33 @@ public class EmailParserApplication {
 
         for (int j = 0; j < numTrades; j++) {
           boolean isSuccess = random.nextDouble() > 0.2; // 80% success rate
-          
+
           // Create trade with all required parameters in the correct order
-          Trade trade = new Trade(
-              nextTradeId++,                                  // id
-              (long) i + 1,                                   // emailId
-              isSuccess,                                      // isSuccess
-              isSuccess ? null : "Failed to process trade",   // errorMessage
-              clientWays[random.nextInt(clientWays.length)],  // clientWay
-              currencies[random.nextInt(currencies.length)],  // currency
-              isinCodes[random.nextInt(isinCodes.length)],    // isinCode
-              securityCodes[random.nextInt(securityCodes.length)], // securityCode
-              random.nextDouble() * 100000.0,                 // notional
-              "SCHEMA_" + (i + 1),                            // schemaIdentifier
-              "EQUITY",                                       // schemaType
-              "1.0",                                          // schemaVersion
-              "HEADER_" + (i + 1),                            // solveHeader
-              "CLIENT_" + (random.nextInt(5) + 1),            // clientId
-              "BROKER_" + (random.nextInt(5) + 1),            // brokerId
-              100.0 * (random.nextInt(10) + 1),               // quantity
-              50.0 + random.nextDouble() * 950.0,             // price
-              emailDate.format(DateTimeFormatter.ISO_DATE) + "T00:00", // tradeDate
-              emailDate.plusDays(2).format(DateTimeFormatter.ISO_DATE) + "T00:00", // settlementDate
-              emailDate                                       // createdAt
-          );
-          
+          Trade trade =
+              new Trade(
+                  nextTradeId++, // id
+                  (long) i + 1, // emailId
+                  isSuccess, // isSuccess
+                  isSuccess ? null : "Failed to process trade", // errorMessage
+                  clientWays[random.nextInt(clientWays.length)], // clientWay
+                  currencies[random.nextInt(currencies.length)], // currency
+                  isinCodes[random.nextInt(isinCodes.length)], // isinCode
+                  securityCodes[random.nextInt(securityCodes.length)], // securityCode
+                  random.nextDouble() * 100000.0, // notional
+                  "SCHEMA_" + (i + 1), // schemaIdentifier
+                  "EQUITY", // schemaType
+                  "1.0", // schemaVersion
+                  "HEADER_" + (i + 1), // solveHeader
+                  "CLIENT_" + (random.nextInt(5) + 1), // clientId
+                  "BROKER_" + (random.nextInt(5) + 1), // brokerId
+                  100.0 * (random.nextInt(10) + 1), // quantity
+                  50.0 + random.nextDouble() * 950.0, // price
+                  emailDate.format(DateTimeFormatter.ISO_DATE) + "T00:00", // tradeDate
+                  emailDate.plusDays(2).format(DateTimeFormatter.ISO_DATE)
+                      + "T00:00", // settlementDate
+                  emailDate // createdAt
+                  );
+
           trades.add(trade);
         }
 
@@ -489,8 +492,7 @@ public class EmailParserApplication {
       String schemaIdentifier,
       String schemaType,
       String schemaVersion,
-      String solveHeader
-  ) {}
+      String solveHeader) {}
 
   // Add a counter for trade IDs
   private static Long nextTradeId = 1L;
@@ -544,20 +546,7 @@ public class EmailParserApplication {
                 "1.0",
                 "SOLVE_HEADER_" + i);
       } else {
-        contract =
-            new Contract(
-                "",
-                "",
-                "",
-                null,
-                null,
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "");
+        contract = new Contract("", "", "", null, null, "", "", "", "", "", "", "");
       }
 
       quotes.add(new Quote(check, contract));
@@ -569,11 +558,12 @@ public class EmailParserApplication {
   private Trade convertQuoteToTrade(Quote quote, Long emailId) {
     // Check if the contract is present
     Contract contract = quote.contract();
-    
+
     // Default values for dates
     String defaultTradeDate = LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "T00:00";
-    String defaultSettlementDate = LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_DATE) + "T00:00";
-    
+    String defaultSettlementDate =
+        LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_DATE) + "T00:00";
+
     return new Trade(
         nextTradeId++,
         emailId,
@@ -594,9 +584,10 @@ public class EmailParserApplication {
         contract != null ? (contract.price() != null ? contract.price() : 0.0) : 0.0,
         // Use null for dates if they're null in the contract
         contract != null ? (contract.tradeDate() != null ? contract.tradeDate() : null) : null,
-        contract != null ? (contract.settlementDate() != null ? contract.settlementDate() : null) : null,
-        LocalDateTime.now()
-    );
+        contract != null
+            ? (contract.settlementDate() != null ? contract.settlementDate() : null)
+            : null,
+        LocalDateTime.now());
   }
 
   @Bean
@@ -649,7 +640,7 @@ public class EmailParserApplication {
         .build();
   }
 
-  // Add method to parse MSG files
+  // Update the parseMsgFile method to handle missing recipients
   private MimeMessage parseMsgFile(String base64Content, Session session) throws Exception {
     // Decode base64 content
     byte[] msgBytes = Base64.getDecoder().decode(base64Content);
@@ -661,31 +652,59 @@ public class EmailParserApplication {
     // Create a new MimeMessage
     MimeMessage mimeMessage = new MimeMessage(session);
 
-    // Set From
-    if (msg.getDisplayFrom() != null) {
-      mimeMessage.setFrom(new InternetAddress(msg.getDisplayFrom()));
-    }
-
-    // Set Subject
-    if (msg.getSubject() != null) {
-      mimeMessage.setSubject(msg.getSubject());
-    }
-
-    // Set To recipients
-    if (msg.getRecipientEmailAddressList() != null) {
-      for (String recipient : msg.getRecipientEmailAddressList()) {
-        mimeMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient));
+    // Set From - handle null case
+    try {
+      String displayFrom = msg.getDisplayFrom();
+      if (displayFrom != null && !displayFrom.isEmpty()) {
+        mimeMessage.setFrom(new InternetAddress(displayFrom));
       }
+    } catch (Exception e) {
+      logger.warn("Could not parse 'From' address from MSG file", e);
     }
 
-    // Set body
-    String textBody = msg.getTextBody();
-    String htmlBody = msg.getHtmlBody();
+    // Set Subject - handle null case
+    try {
+      String subject = msg.getSubject();
+      if (subject != null && !subject.isEmpty()) {
+        mimeMessage.setSubject(subject);
+      }
+    } catch (Exception e) {
+      logger.warn("Could not parse subject from MSG file", e);
+    }
 
-    if (htmlBody != null) {
-      mimeMessage.setContent(htmlBody, "text/html; charset=UTF-8");
-    } else if (textBody != null) {
-      mimeMessage.setText(textBody);
+    // Set To recipients - handle missing recipients section
+    try {
+      String[] recipients = msg.getRecipientEmailAddressList();
+      if (recipients != null && recipients.length > 0) {
+        for (String recipient : recipients) {
+          if (recipient != null && !recipient.isEmpty()) {
+            mimeMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient));
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.warn("Could not parse recipients from MSG file", e);
+      // Set default recipient if needed for your use case
+      // mimeMessage.addRecipient(Message.RecipientType.TO, new
+      // InternetAddress("default@example.com"));
+    }
+
+    // Set body - handle both HTML and plain text
+    try {
+      String htmlBody = msg.getHtmlBody();
+      String textBody = msg.getTextBody();
+
+      if (htmlBody != null && !htmlBody.isEmpty()) {
+        mimeMessage.setContent(htmlBody, "text/html; charset=UTF-8");
+      } else if (textBody != null && !textBody.isEmpty()) {
+        mimeMessage.setText(textBody);
+      } else {
+        // Set empty body if both are null
+        mimeMessage.setText("");
+      }
+    } catch (Exception e) {
+      logger.warn("Could not parse body from MSG file", e);
+      mimeMessage.setText(""); // Set empty body as fallback
     }
 
     return mimeMessage;
@@ -728,8 +747,7 @@ record Trade(
     Double price,
     String tradeDate,
     String settlementDate,
-    LocalDateTime createdAt
-) {}
+    LocalDateTime createdAt) {}
 
 record EmailRequest(String body, String fileType) {}
 
